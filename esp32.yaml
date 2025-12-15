@@ -13,9 +13,6 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  ap:
-    ssid: "WalkingPad Fallback"
-    password: "changeme"
 
 # ── Editable calibration parameters (set from Home Assistant) ───────────────────
 number:
@@ -28,7 +25,7 @@ number:
     optimistic: true
     restore_value: true
 
-  # Linear travel per ONE axle revolution (mm)
+  # Linear travel per ONE axle revolution (mm) 36cm/360mm for walkolution2
   # If the axle directly drives the belt roller: this equals roller circumference.
   - platform: template
     name: "Axle travel per rev (mm)"
@@ -39,7 +36,6 @@ number:
     optimistic: true
     restore_value: true
 
-# ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
   # Axle hall pulses: use pulse_meter for better low-speed behavior
   - platform: pulse_meter
