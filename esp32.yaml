@@ -17,27 +17,7 @@ wifi:
     ssid: "WalkingPad Fallback"
     password: "changeme"
 
-# ── Hall pulses from AXLE ───────────────────────────────────────────────────────
-# We use pulse_meter because it measures the time between pulses -> smooth at low RPM.
-# (intended as drop-in replacement for pulse_counter with better low-rate behavior)
-# Docs: https://esphome.io/components/sensor/pulse_meter/
-sensor:
-  - platform: pulse_meter
-    id: axle_pm
-    name: "Axle pulses/min"
-    pin:
-      number: GPIO14
-      mode:
-        input: true
-        pullup: true         # KY-003 is open-collector style; pull-up stabilizes the line
-    internal_filter: 2ms      # Debounce; increase if you see double-counting
-    internal_filter_mode: PULSE
-    timeout: 10s
-    total:
-      id: axle_total
-      name: "Axle pulses total"
-
-# ── Editable calibration parameters (from HA) ───────────────────────────────────
+# ── Editable calibration parameters (set from Home Assistant) ───────────────────
 number:
   - platform: template
     name: "Magnets per revolution"
@@ -48,9 +28,8 @@ number:
     optimistic: true
     restore_value: true
 
-  # This is the LINEAR travel per one axle revolution.
-  # If the axle IS the belt roller, this is the roller circumference.
-  # If there is gearing, use: circumference * (roller revs per axle rev).
+  # Linear travel per ONE axle revolution (mm)
+  # If the axle directly drives the belt roller: this equals roller circumference.
   - platform: template
     name: "Axle travel per rev (mm)"
     id: travel_per_rev_mm
@@ -60,9 +39,25 @@ number:
     optimistic: true
     restore_value: true
 
-# ── Derived sensors (RPM, speed, distances) ─────────────────────────────────────
+# ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
-  # Axle RPM
+  # Axle hall pulses: use pulse_meter for better low-speed behavior
+  - platform: pulse_meter
+    id: axle_pm
+    name: "Axle pulses/min"
+    pin:
+      number: GPIO14
+      mode:
+        input: true
+        pullup: true       # KY-003 is open-collector style; pull-up stabilizes input
+    internal_filter: 2ms
+    internal_filter_mode: PULSE
+    timeout: 10s
+    total:
+      id: axle_total
+      name: "Axle pulses total"
+
+  # Axle RPM derived from pulses/min and magnets per revolution
   - platform: template
     id: axle_rpm
     name: "Axle RPM"
@@ -71,8 +66,7 @@ sensor:
     update_interval: 1s
     lambda: |-
       const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
-      float pulses_per_min = id(axle_pm).state;
-      return pulses_per_min / magnets;
+      return id(axle_pm).state / magnets;
 
   # Instant walking speed (km/h)
   - platform: template
@@ -84,12 +78,11 @@ sensor:
     lambda: |-
       const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
       const float travel_m = id(travel_per_rev_mm).state / 1000.0f; // mm -> m
-      float pulses_per_min = id(axle_pm).state;
-      float revs_per_min = pulses_per_min / magnets;
+      float revs_per_min = id(axle_pm).state / magnets;
       float m_per_min = revs_per_min * travel_m;
       return (m_per_min * 60.0f) / 1000.0f;  // -> km/h
 
-  # Total distance since boot, from total pulses
+  # Total distance since boot
   - platform: template
     id: distance_total_km
     name: "Distance total"
@@ -103,11 +96,11 @@ sensor:
       float meters = revs_total * travel_m;
       return meters / 1000.0f;
 
-  # Distance today: integrate speed over time (km/h * h -> km)
+  # Distance today: integrates speed (km/h) over time → km
   - platform: integration
     name: "Distance today"
     sensor: speed_kmh
     time_unit: h
     unit_of_measurement: "km"
     state_class: total
-   
+    restore: true
