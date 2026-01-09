@@ -8,7 +8,9 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
-
+    
+#Enable Logging
+logger:
 # Enable Home Assistant API
 api:
 
@@ -22,26 +24,26 @@ wifi:
 
 
 # ── Editable calibration parameters (set from Home Assistant) ───────────────────
-number:
-  - platform: template
-    name: "Magnets per revolution"
-    id: magnets_per_rev
-    min_value: 1
-    max_value: 12
-    step: 1
-    optimistic: true
-    restore_value: true
+#number:
+# - platform: template
+#    name: "Magnets per revolution"
+#    id: magnets_per_rev
+#    min_value: 1
+#    max_value: 12
+#    step: 1
+#    optimistic: true
+#    restore_value: true
 
   # Linear travel per ONE axle revolution (mm)
   # If the axle directly drives the belt roller: this equals roller circumference.
-  - platform: template
-    name: "Axle travel per rev (mm)"
-    id: travel_per_rev_mm
-    min_value: 50
-    max_value: 5000
-    step: 1
-    optimistic: true
-    restore_value: true
+#  - platform: template
+#    name: "Axle travel per rev (mm)"
+#    id: travel_per_rev_mm
+#    min_value: 50
+#    max_value: 5000
+#    step: 1
+#    optimistic: true
+#    restore_value: true
 
 # ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
@@ -69,7 +71,7 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
+      const float magnets = 1; #Magnets per revolution
       return id(axle_pm).state / magnets;
 
   # Instant walking speed (km/h)
@@ -81,7 +83,7 @@ sensor:
     update_interval: 1s
     lambda: |-
       const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
-      const float travel_m = id(travel_per_rev_mm).state / 1000.0f; // mm -> m
+      const float travel_m = 362 / 1000.0f; // mm -> m # 3,62cm per revolution for the Walkolution2
       float revs_per_min = id(axle_pm).state / magnets;
       float m_per_min = revs_per_min * travel_m;
       return (m_per_min * 60.0f) / 1000.0f;  // -> km/h
@@ -95,7 +97,7 @@ sensor:
     update_interval: 10s
     lambda: |-
       const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
-      const float travel_m = id(travel_per_rev_mm).state / 1000.0f;
+      const float travel_m = 362  / 1000.0f; # 3,62cm per revolution for the Walkolution2
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
       return meters / 1000.0f;
