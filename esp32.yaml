@@ -10,7 +10,8 @@ esp32:
     type: esp-idf
     
 #Enable Logging
-logger:
+#logger:
+
 # Enable Home Assistant API
 api:
 
@@ -71,7 +72,7 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = 1; #Magnets per revolution
+      const float magnets = 1; # Magnets per revolution
       return id(axle_pm).state / magnets;
 
   # Instant walking speed (km/h)
@@ -82,7 +83,7 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
+      const float magnets = 1; # Magnets per revolution
       const float travel_m = 362 / 1000.0f; // mm -> m # 3,62cm per revolution for the Walkolution2
       float revs_per_min = id(axle_pm).state / magnets;
       float m_per_min = revs_per_min * travel_m;
@@ -96,7 +97,7 @@ sensor:
     state_class: total_increasing
     update_interval: 10s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
+      const float magnets = 1; # Magnets per revolution
       const float travel_m = 362  / 1000.0f; # 3,62cm per revolution for the Walkolution2
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
