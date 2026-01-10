@@ -20,7 +20,9 @@ esp32:
     type: esp-idf
     
 #Enable Logging
-#logger:
+logger:
+  logs:
+    component: ERROR
 
 # Enable Home Assistant API
 api:
@@ -163,7 +165,22 @@ graph:
     border: true
 
 # ── Display using newer MIPI/ILI driver ─────────────────────────────────────────
-# OPTION A: If your module is the Adafruit round-rect 280x240 (rotated):
+
+# Define a PWM output on the ESP32
+output:
+  - platform: ledc
+    pin: GPIO04
+    id: gpio_04_backlight_pwm
+
+# Define a monochromatic, dimmable light for the backlight
+light:
+  - platform: monochromatic
+    output: gpio_04_backlight_pwm
+    name: "Display Backlight"
+    id: back_light
+    restore_mode: ALWAYS_ON
+
+
 display:
   - platform: ili9xxx
     id: tft
