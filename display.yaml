@@ -105,7 +105,7 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1;
+      const float magnets = id(magnets_per_rev)> 0.0 ? id(magnets_per_rev) : 1.0;
       return id(axle_pm).state / magnets;
 
   # Instant walking speed (km/h)
@@ -116,11 +116,11 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1;
-      const float travel_m = id(travel_per_rev_mm).state / 1000; // mm -> m
+      const float magnets = id(magnets_per_rev) > 0.0 ? id(magnets_per_rev) : 1.0;
+      const float travel_m = id(travel_per_rev_mm) / 1000.0; // mm -> m
       float revs_per_min = id(axle_pm).state / magnets;
       float m_per_min = revs_per_min * travel_m;
-      return (m_per_min * 60.0f) / 1000;  // -> km/h
+      return (m_per_min * 60.0f) / 1000.0;  // -> km/h
 
   # Total distance since boot
   - platform: template
@@ -130,8 +130,8 @@ sensor:
     state_class: total_increasing
     update_interval: 10s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1;
-      const float travel_m = id(travel_per_rev_mm).state / 1000; // mm -> m
+      const float magnets = id(magnets_per_rev) > 0.0 ? id(magnets_per_rev): 1.0;
+      const float travel_m = id(travel_per_rev_mm) / 1000.0; // mm -> m
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
       return meters / 1000;
@@ -143,9 +143,9 @@ sensor:
     state_class: total_increasing
     update_interval: 10s
     lambda: |-
-      const float magnets = 1;
-      const float travel_m = id(travel_per_rev_mm).state / 1000;
-      const float step_len = 0.4;
+      const float magnets = id(magnets_per_rev) > 0.0 ? id(magnets_per_rev): 1.0;
+      const float travel_m = id(travel_per_rev_mm) / 1000.0;
+      const float step_len = id(step_length_m);
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
       return meters / step_len;
@@ -181,4 +181,4 @@ display:
           it.printf(8, 34, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
           it.printf(8, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state);
           it.printf(8, 152, id(roboto_14), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
-          it.graph(6, 176, id(speed_graph), id(my_yellow))
+          it.graph(6, 176, id(speed_graph), id(my_yellow));
