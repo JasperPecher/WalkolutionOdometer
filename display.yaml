@@ -3,29 +3,35 @@
 # GND → GND
 # SCL (SPI clock) → ESP32 GPIO18 (SCLK)
 # SDA (SPI MOSI) → ESP32 GPIO19 (MOSI)
-# DC (Data/Command) → ESP32 GPIO16 (any free GPIO)
 # RES (Reset) → ESP32 GPIO23 (any free GPIO)
+# DC (Data/Command) → ESP32 GPIO16 (any free GPIO)
 # CS (Chip Select) → ESP32 GPIO5 (or tie low if your board truly has no CS pin)
 # BLK (Backlight) → ESP32 GPIO4 (optional, PWM/ON/OFF)
 
-
 esphome:
-  name: walkingpad
-  friendly_name: Walking Pad (ST7789 240x280, MIPI/ILI)
+  name: walkolution
+  friendly_name: Walkolution
+  min_version: 2025.11.0
+  name_add_mac_suffix: false
 
 esp32:
-  board: esp32dev
+  variant: esp32
+  framework:
+    type: esp-idf
+    
+#Enable Logging
+#logger:
 
-logger:
+# Enable Home Assistant API
 api:
+
+# Allow Over-The-Air updates
 ota:
+- platform: esphome
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  ap:
-    ssid: "WalkingPad Fallback"
-    password: "changeme"
 
 # ── SPI bus for ST7789 ──────────────────────────────────────────────────────────
 spi:
@@ -61,36 +67,21 @@ color:
     green: 100%
     blue: 100%
 
-# ── Axle pulses + derived sensors (from previous config) ────────────────────────
-number:
-  - platform: template
-    name: "Magnets per revolution"
-    id: magnets_per_rev
-    min_value: 1
-    max_value: 12
-    step: 1
-    optimistic: true
-    restore_value: true
+# ── Calibration parameters (set from Home Assistant) ───────────────────
+globals:
+  - id: magnets_per_rev
+    type: int
+    initial_value: '1'
+  - id: travel_per_rev_mm
+    type: int
+    initial_value: '362'
+  - id: step_length_m
+    type: float
+    initial_value: '0.4'
 
-  - platform: template
-    name: "Axle travel per rev (mm)"
-    id: travel_per_rev_mm
-    min_value: 50
-    max_value: 5000
-    step: 1
-    optimistic: true
-    restore_value: true
-
-  - platform: template
-    name: "Step length (m)"
-    id: step_length_m
-    min_value: 0.40
-    max_value: 1.20
-    step: 0.01
-    optimistic: true
-    restore_value: true
-
+# ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
+  # Axle hall pulses: use pulse_meter for better low-speed behavior
   - platform: pulse_meter
     id: axle_pm
     name: "Axle pulses/min"
@@ -98,7 +89,7 @@ sensor:
       number: GPIO14
       mode:
         input: true
-        pullup: true
+        pullup: true       # KY-003 is open-collector style; pull-up stabilizes input
     internal_filter: 2ms
     internal_filter_mode: PULSE
     timeout: 10s
@@ -106,6 +97,7 @@ sensor:
       id: axle_total
       name: "Axle pulses total"
 
+  # Axle RPM derived from pulses/min and magnets per revolution
   - platform: template
     id: axle_rpm
     name: "Axle RPM"
@@ -113,9 +105,10 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
+      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1;
       return id(axle_pm).state / magnets;
 
+  # Instant walking speed (km/h)
   - platform: template
     id: speed_kmh
     name: "Walking speed"
@@ -123,59 +116,40 @@ sensor:
     state_class: measurement
     update_interval: 1s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
-      const float travel_m = id(travel_per_rev_mm).state / 1000.0f; // mm -> m
+      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1;
+      const float travel_m = id(travel_per_rev_mm).state / 1000; // mm -> m
       float revs_per_min = id(axle_pm).state / magnets;
       float m_per_min = revs_per_min * travel_m;
-      return (m_per_min * 60.0f) / 1000.0f;  // km/h
+      return (m_per_min * 60.0f) / 1000;  // -> km/h
 
+  # Total distance since boot
   - platform: template
-    id: distance_total_km
-    name: "Distance total"
+    id: distance_boot_km
+    name: "Distance since boot"
     unit_of_measurement: "km"
     state_class: total_increasing
     update_interval: 10s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
-      const float travel_m = id(travel_per_rev_mm).state / 1000.0f;
+      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1;
+      const float travel_m = id(travel_per_rev_mm).state / 1000; // mm -> m
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
-      return meters / 1000.0f;
-
-  - platform: integration
-    name: "Distance today"
-    id: distance_today_km
-    sensor: speed_kmh
-    time_unit: h
-    unit_of_measurement: "km"
-    state_class: total
-    restore: true
-
-  - platform: integration
-    name: "Steps today"
-    id: steps_today
-    sensor: speed_kmh
-    time_unit: h
-    unit_of_measurement: "steps"
-    state_class: total
-    restore: true
-    lambda: |-
-      const float step_len = id(step_length_m).state;
-      return (x * 1000.0f) / step_len;
+      return meters / 1000;
 
   - platform: template
-    id: steps_total
-    name: "Steps total"
+    id: steps_today
+    name: "Steps today"
     unit_of_measurement: "steps"
     state_class: total_increasing
     update_interval: 10s
     lambda: |-
-      const float magnets = id(magnets_per_rev).state > 0 ? id(magnets_per_rev).state : 1.0f;
-      const float travel_m = id(travel_per_rev_mm).state / 1000.0f;
-      const float step_len = id(step_length_m).state;
+      const float magnets = 1;
+      const float travel_m = id(travel_per_rev_mm).state / 1000;
+      const float step_len = 0.4;
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
       return meters / step_len;
+
 
 # ── Small speed graph (5 minutes) ──────────────────────────────────────────────
 graph:
@@ -193,11 +167,11 @@ graph:
 display:
   - platform: ili9xxx
     id: tft
-    model: "Adafruit RR 280x240"   # preset model (round-rect)
+    model: "ST7789V"   # preset model (round-rect)
+    invert_colors: false
     cs_pin: GPIO5
     dc_pin: GPIO16
     reset_pin: GPIO23
-    backlight_pin: GPIO4
     rotation: 270                  # try 0/90/180/270 to match orientation
     update_interval: 500ms
     pages:
@@ -205,35 +179,6 @@ display:
         lambda: |-
           it.printf(8, 6, id(roboto_20), id(my_yellow), "Walking Pad");
           it.printf(8, 34, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
-          it.printf(8, 70, id(roboto_20), id(my_white), "Today: %.3f km", id(distance_today_km).state);
-          it.printf(8, 96, id(roboto_20), id(my_white), "Total: %.3f km", id(distance_total_km).state);
-          it.printf(8, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state, id(steps_total).state);
+          it.printf(8, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state);
           it.printf(8, 152, id(roboto_14), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
           it.graph(6, 176, id(speed_graph), id(my_yellow))
-
-# OPTION B: Plain rectangular 240x280 ST7789 (custom model):
-# (Remove OPTION A above if you use this one)
-# display:
-#   - platform: ili9xxx
-#     id: tft
-#     model: "Custom"
-#     width: 240
-#     height: 280
-#     offset_width: 0
-#     offset_height: 0
-#     cs_pin: GPIO5
-#     dc_pin: GPIO16
-#     reset_pin: GPIO23
-#     backlight_pin: GPIO4
-#     rotation: 0
-#     update_interval: 500ms
-#     pages:
-#       - id: dashboard
-#         lambda: |-
-#           it.printf(8, 6, id(roboto_20), id(my_yellow), "Walking Pad");
-#           it.printf(8, 34, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
-#           it.printf(8, 70, id(roboto_20), id(my_white), "Today: %.3f km", id(distance_today_km).state);
-#           it.printf(8, 96, id(roboto_20), id(my_white), "Total: %.3f km", id(distance_total_km).state);
-#           it.printf(8, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state, id(steps_total).state);
-#           it.printf(8, 152, id(roboto_14), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
-#           it.graph(6, 200, id(speed_graph), id(my_yellow))
