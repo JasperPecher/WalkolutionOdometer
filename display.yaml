@@ -1,12 +1,17 @@
 # Wiring
-# VCC → 3.3 V
-# GND → GND
-# SCL (SPI clock) → ESP32 GPIO18 (SCLK)
-# SDA (SPI MOSI) → ESP32 GPIO19 (MOSI)
-# RES (Reset) → ESP32 GPIO23 (any free GPIO)
-# DC (Data/Command) → ESP32 GPIO16 (any free GPIO)
-# CS (Chip Select) → ESP32 GPIO5 (or tie low if your board truly has no CS pin)
-# BLK (Backlight) → ESP32 GPIO4 (optional, PWM/ON/OFF)
+# ── Display ─────────
+# GND	GND
+# VCC	3.3V
+# SCL	GPIO18
+# SDA	GPIO23
+# RES	GPIO4
+# DC	GPIO2
+# CS	GPIO5
+# BLK	3.3V
+# ── KY-003 Sensor ─────────
+# - GND
+# middle 5V
+# S GPIO27
 
 esphome:
   name: walkolution
@@ -35,40 +40,6 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
-# ── SPI bus for ST7789 ──────────────────────────────────────────────────────────
-spi:
-  clk_pin: GPIO18   # SCL / SCK
-  mosi_pin: GPIO19  # SDA / MOSI
-  # MISO not used
-
-# ── Fonts ───────────────────────────────────────────────────────────────────────
-font:
-  - file: "gfonts://Roboto"
-    id: roboto_20
-    size: 20
-  - file: "gfonts://Roboto"
-    id: roboto_28
-    size: 28
-  - file: "gfonts://Roboto"
-    id: roboto_14
-    size: 14
-    bpp: 4
-
-# ── Colors ─────────────────────────────────────────────────────────────────────
-color:
-  - id: my_white
-    red: 100%
-    green: 100%
-    blue: 100%
-  - id: my_yellow
-    red: 100%
-    green: 100%
-    blue: 0%
-  - id: my_cyan
-    red: 0%
-    green: 100%
-    blue: 100%
-
 # ── Calibration parameters (set from Home Assistant) ───────────────────
 globals:
   - id: magnets_per_rev
@@ -88,8 +59,8 @@ sensor:
     id: axle_pm
     name: "Axle pulses/min"
     pin:
-      number: GPIO14
-      mode:
+      number: GPIO27
+      mode: 
         input: true
         pullup: true       # KY-003 is open-collector style; pull-up stabilizes input
     internal_filter: 2ms
@@ -153,49 +124,58 @@ sensor:
       return meters / step_len;
 
 
-# ── Small speed graph (5 minutes) ──────────────────────────────────────────────
-graph:
-  - id: speed_graph
-    sensor: speed_kmh
-    duration: 5min
-    width: 228
-    height: 70
-    x_grid: 1min
-    y_grid: 1.0
-    border: true
+# ── Colors ─────────────────────────────────────────────────────────────────────
+color:
+  - id: my_white
+    red: 100%
+    green: 100%
+    blue: 100%
+  - id: my_yellow
+    red: 100%
+    green: 100%
+    blue: 0%
+  - id: my_cyan
+    red: 0%
+    green: 100%
+    blue: 100%
 
-# ── Display using newer MIPI/ILI driver ─────────────────────────────────────────
+# ── Fonts ───────────────────────────────────────────────────────────────────────
+font:
+  - file: "gfonts://Roboto"
+    id: roboto_20
+    size: 20
+  - file: "gfonts://Roboto"
+    id: roboto_28
+    size: 28
+  - file: "gfonts://Roboto"
+    id: roboto_14
+    size: 14
+    bpp: 4
 
-# Define a PWM output on the ESP32
-output:
-  - platform: ledc
-    pin: GPIO04
-    id: gpio_04_backlight_pwm
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  interface: hardware # Force hardware SPI for stability
 
-# Define a monochromatic, dimmable light for the backlight
-light:
-  - platform: monochromatic
-    output: gpio_04_backlight_pwm
-    name: "Display Backlight"
-    id: back_light
-    restore_mode: ALWAYS_ON
-
+time:
+  - platform: homeassistant
+    id: esptime
 
 display:
-  - platform: ili9xxx
-    id: tft
-    model: "ST7789V"   # preset model (round-rect)
-    invert_colors: false
+  - platform: st7789v
+    model: custom
+    width: 240
+    height: 320
+    rotation: 270
+    offset_height: 0
+    offset_width: 0
     cs_pin: GPIO5
-    dc_pin: GPIO16
-    reset_pin: GPIO23
-    rotation: 270                  # try 0/90/180/270 to match orientation
-    update_interval: 500ms
-    pages:
-      - id: dashboard
-        lambda: |-
-          it.printf(8, 6, id(roboto_20), id(my_yellow), "Walking Pad");
-          it.printf(8, 34, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
-          it.printf(8, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state);
-          it.printf(8, 152, id(roboto_14), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
-          it.graph(6, 176, id(speed_graph), id(my_yellow));
+    dc_pin: GPIO26      
+    reset_pin: GPIO4
+    eightbitcolor: true
+    lambda: |-
+          it.strftime(20, 30, id(roboto_28), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
+          it.printf(20, 45, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
+          it.printf(20, 75, id(roboto_28), id(my_white), "Distance: %.2f km", id(distance_boot_km).state);
+          it.printf(20, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state);
+          it.printf(20, 152, id(roboto_14), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
