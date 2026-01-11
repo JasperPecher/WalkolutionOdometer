@@ -5,7 +5,7 @@
 # SCL	GPIO18
 # SDA	GPIO23
 # RES	GPIO4
-# DC	GPI27
+# DC	GPI26
 # CS	GPIO5
 # BLK	3.3V
 # ── KY-003 Sensor ─────────
