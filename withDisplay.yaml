@@ -4,7 +4,7 @@
 # VCC	3.3V
 # SCL	GPIO18
 # SDA	GPIO23
-# RES	GPIO4
+# RES	GPIO4 <-> 10k Ohm Resistor <-> 3.3V
 # DC	GPIO26
 # CS	GPI15
 # BLK	3.3V
