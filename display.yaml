@@ -1,13 +1,14 @@
-# Wiring
+# ── Wiring ───────────────────────────────
 # ── Display ─────────
 # GND	GND
 # VCC	3.3V
 # SCL	GPIO18
 # SDA	GPIO23
 # RES	GPIO4
-# DC	GPI26
-# CS	GPIO5
+# DC	GPIO26
+# CS	GPI15
 # BLK	3.3V
+
 # ── KY-003 Sensor ─────────
 # - GND
 # middle 5V
@@ -18,6 +19,11 @@ esphome:
   friendly_name: Walkolution
   min_version: 2025.11.0
   name_add_mac_suffix: false
+  on_boot:
+    priority: -100 # Run after everything else is initialized
+    then:
+      - delay: 1s
+      - component.update: my_display_id # Force a refresh after power is stable
 
 esp32:
   variant: esp32
@@ -26,8 +32,6 @@ esp32:
     
 #Enable Logging
 logger:
-  logs:
-    component: ERROR
 
 # Enable Home Assistant API
 api:
@@ -163,18 +167,20 @@ time:
 
 display:
   - platform: st7789v
+    id: my_display_id
     model: custom
     width: 240
     height: 320
     rotation: 270
     offset_height: 0
     offset_width: 0
-    cs_pin: GPIO5
-    dc_pin: GPIO26      
+    cs_pin: GPIO15
+    dc_pin: GPIO26
     reset_pin: GPIO4
+    #data_rate: 20MHz  # Lower speed is more stable on startup
     eightbitcolor: true
     lambda: |-
-          it.strftime(20, 30, id(roboto_28), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
+          it.strftime(150, 30, id(roboto_28), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
           it.printf(20, 45, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
           it.printf(20, 75, id(roboto_28), id(my_white), "Distance: %.2f km", id(distance_boot_km).state);
           it.printf(20, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state);
