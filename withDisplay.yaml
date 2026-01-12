@@ -54,7 +54,7 @@ globals:
     initial_value: '362'
   - id: step_length_m
     type: float
-    initial_value: '0.4'
+    initial_value: '0.6'
 
 # ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
