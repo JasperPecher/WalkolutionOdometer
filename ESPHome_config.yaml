@@ -12,7 +12,7 @@
 # ── KY-003 Sensor ─────────
 # - GND
 # middle 5V
-# S GPIO27
+# S GPIO25
 
 esphome:
   name: walkolution
@@ -24,6 +24,7 @@ esphome:
     then:
       - delay: 1s
       - component.update: my_display_id # Force a refresh after power is stable
+      
 
 esp32:
   variant: esp32
@@ -54,7 +55,7 @@ globals:
     initial_value: '362'
   - id: step_length_m
     type: float
-    initial_value: '0.6'
+    initial_value: '0.65'
 
 # ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
@@ -63,10 +64,10 @@ sensor:
     id: axle_pm
     name: "Axle pulses/min"
     pin:
-      number: GPIO27
-      mode: 
-        input: true
-        pullup: true       # KY-003 is open-collector style; pull-up stabilizes input
+      number: GPIO25
+      mode: INPUT
+        #input: true
+        #pullup: true       # KY-003 is open-collector style; pull-up stabilizes input
     internal_filter: 2ms
     internal_filter_mode: PULSE
     timeout: 10s
@@ -146,11 +147,14 @@ color:
 # ── Fonts ───────────────────────────────────────────────────────────────────────
 font:
   - file: "gfonts://Roboto"
-    id: roboto_20
-    size: 20
+    id: roboto_32
+    size: 32
   - file: "gfonts://Roboto"
     id: roboto_28
     size: 28
+  - file: "gfonts://Roboto"
+    id: roboto_20
+    size: 20
   - file: "gfonts://Roboto"
     id: roboto_14
     size: 14
@@ -171,17 +175,17 @@ display:
     model: custom
     width: 240
     height: 320
-    rotation: 270
-    offset_height: 0
+#    rotation: 270
+    offset_height: 0  
     offset_width: 0
     cs_pin: GPIO15
     dc_pin: GPIO26
     reset_pin: GPIO4
-    #data_rate: 20MHz  # Lower speed is more stable on startup
+    data_rate: 20MHz  # Lower speed is more stable on startup
     eightbitcolor: true
     lambda: |-
-          it.strftime(150, 30, id(roboto_28), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
-          it.printf(20, 45, id(roboto_28), id(my_white), "Speed: %.2f km/h", id(speed_kmh).state);
-          it.printf(20, 75, id(roboto_28), id(my_white), "Distance: %.2f km", id(distance_boot_km).state);
-          it.printf(20, 124, id(roboto_20), id(my_white), "Steps: %.0f / %.0f", id(steps_today).state);
-          it.printf(20, 152, id(roboto_14), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
+          it.strftime(60, 50, id(roboto_32), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
+          it.printf(40, 75, id(roboto_28), id(my_white), "%.2f km/h", id(speed_kmh).state);
+          it.printf(40, 100, id(roboto_28), id(my_white), "%.2f km", id(distance_boot_km).state);
+          it.printf(40, 160, id(roboto_20), id(my_yellow), "Steps: %.0f", id(steps_today).state);
+          it.printf(40, 180, id(roboto_20), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
