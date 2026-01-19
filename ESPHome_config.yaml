@@ -181,11 +181,11 @@ display:
     cs_pin: GPIO15
     dc_pin: GPIO26
     reset_pin: GPIO4
-    data_rate: 20MHz  # Lower speed is more stable on startup
+#    data_rate: 20MHz  # Lower speed is more stable on startup
     eightbitcolor: true
     lambda: |-
-          it.strftime(60, 50, id(roboto_32), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
-          it.printf(40, 75, id(roboto_28), id(my_white), "%.2f km/h", id(speed_kmh).state);
-          it.printf(40, 100, id(roboto_28), id(my_white), "%.2f km", id(distance_boot_km).state);
-          it.printf(40, 160, id(roboto_20), id(my_yellow), "Steps: %.0f", id(steps_today).state);
-          it.printf(40, 180, id(roboto_20), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
+          it.strftime(80, 50, id(roboto_32), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
+          it.printf(50, 75, id(roboto_28), id(my_white), "%.2f km/h", id(speed_kmh).state);
+          it.printf(50, 100, id(roboto_28), id(my_white), "%.2f km", id(distance_boot_km).state);
+          it.printf(50, 160, id(roboto_20), id(my_yellow), "Steps: %.0f", id(steps_today).state);
+          it.printf(50, 180, id(roboto_20), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
