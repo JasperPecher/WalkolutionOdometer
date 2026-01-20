@@ -143,22 +143,25 @@ color:
     red: 0%
     green: 100%
     blue: 100%
+  - id: my_red
+    red: 100%
+    green: 3%
+    blue: 5%
 
 # ── Fonts ───────────────────────────────────────────────────────────────────────
 font:
   - file: "gfonts://Roboto"
-    id: roboto_32
-    size: 32
+    id: roboto_40
+    size: 40
   - file: "gfonts://Roboto"
-    id: roboto_28
-    size: 28
+    id: roboto_36
+    size: 36
+  - file: "gfonts://Roboto"
+    id: roboto_30
+    size: 30
   - file: "gfonts://Roboto"
     id: roboto_20
     size: 20
-  - file: "gfonts://Roboto"
-    id: roboto_14
-    size: 14
-    bpp: 4
 
 spi:
   clk_pin: GPIO18
@@ -184,8 +187,7 @@ display:
 #    data_rate: 20MHz  # Lower speed is more stable on startup
     eightbitcolor: true
     lambda: |-
-          it.strftime(80, 50, id(roboto_32), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
-          it.printf(50, 75, id(roboto_28), id(my_white), "%.2f km/h", id(speed_kmh).state);
-          it.printf(50, 100, id(roboto_28), id(my_white), "%.2f km", id(distance_boot_km).state);
-          it.printf(50, 160, id(roboto_20), id(my_yellow), "Steps: %.0f", id(steps_today).state);
-          it.printf(50, 180, id(roboto_20), id(my_cyan), "Axle RPM: %.1f", id(axle_rpm).state);
+          it.strftime(80, 60, id(roboto_40), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
+          it.printf(50, 120, id(roboto_36), id(my_white), "%.2f km/h", id(speed_kmh).state);
+          it.printf(50, 150, id(roboto_36), id(my_white), "%.2f km", id(distance_boot_km).state);
+          it.printf(50, 230, id(roboto_30), id(my_yellow), "Steps: %.0f", id(steps_today).state);
