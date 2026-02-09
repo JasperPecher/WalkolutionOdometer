@@ -4,18 +4,18 @@
 # VCC	3.3V
 # SCL	GPIO18
 # SDA	GPIO23
-# RES	GPIO4 <-> 10k Ohm Resistor <-> 3.3V
+# RES	GPIO4
 # DC	GPIO26
-# CS	GPI15
-# BLK	3.3V
+# CS	GPIO15
+# BLK	GPIO32
 
 # ── KY-003 Sensor ─────────
 # - GND
-# middle 5V
-# S GPIO25
+# middle 3V
+# S <-> optocopler <-> GPIO25
 
 esphome:
-  name: walkolution
+  name: "walkolution"
   friendly_name: Walkolution
   min_version: 2025.11.0
   name_add_mac_suffix: false
@@ -33,6 +33,7 @@ esp32:
     
 #Enable Logging
 logger:
+  level: WARN # This stops the ESP32 from trying to print every single pulse
 
 # Enable Home Assistant API
 api:
@@ -55,22 +56,23 @@ globals:
     initial_value: '362'
   - id: step_length_m
     type: float
-    initial_value: '0.65'
+    initial_value: '0.7'
 
 # ── All sensors in ONE block to avoid duplicate-key errors ──────────────────────
 sensor:
-  # Axle hall pulses: use pulse_meter for better low-speed behavior
+  - platform: uptime
+    name: "Axle ESP32 Uptime"
+    id: axle_uptime
+    update_interval: 10s
+    
   - platform: pulse_meter
     id: axle_pm
-    name: "Axle pulses/min"
+    name: "Axle Speed"
     pin:
       number: GPIO25
-      mode: INPUT
-        #input: true
-        #pullup: true       # KY-003 is open-collector style; pull-up stabilizes input
-    internal_filter: 2ms
-    internal_filter_mode: PULSE
-    timeout: 10s
+      mode: INPUT # The module has its own pull-up resistor, so we don't need INPUT_PULLUP
+      inverted: true 
+    internal_filter: 50ms 
     total:
       id: axle_total
       name: "Axle pulses total"
@@ -171,6 +173,18 @@ spi:
 time:
   - platform: homeassistant
     id: esptime
+
+output:
+  - platform: ledc
+    pin: GPIO32
+    id: backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Display Backlight"
+    restore_mode: ALWAYS_ON
+    default_transition_length: 0s
 
 display:
   - platform: st7789v
