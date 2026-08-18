@@ -14,16 +14,17 @@
 # middle 3V
 # S <-> optocopler <-> GPIO25
 
+# ── Wiring ───────────────────────────────
+# ── KY-003 Sensor ─────────
+# - GND
+# middle 3V
+# S <-> optocopler <-> GPIO25
+
 esphome:
   name: "walkolution"
   friendly_name: Walkolution
   min_version: 2025.11.0
   name_add_mac_suffix: false
-  on_boot:
-    priority: -100 # Run after everything else is initialized
-    then:
-      - delay: 1s
-      - component.update: my_display_id # Force a refresh after power is stable
       
 
 esp32:
@@ -33,7 +34,7 @@ esp32:
     
 #Enable Logging
 logger:
-  level: WARN # This stops the ESP32 from trying to print every single pulse
+ # level: WARN # This stops the ESP32 from trying to print every single pulse
 
 # Enable Home Assistant API
 api:
@@ -129,79 +130,3 @@ sensor:
       float revs_total = id(axle_total).state / magnets;
       float meters = revs_total * travel_m;
       return meters / step_len;
-
-
-# ── Colors ─────────────────────────────────────────────────────────────────────
-color:
-  - id: my_white
-    red: 100%
-    green: 100%
-    blue: 100%
-  - id: my_yellow
-    red: 100%
-    green: 100%
-    blue: 0%
-  - id: my_cyan
-    red: 0%
-    green: 100%
-    blue: 100%
-  - id: my_red
-    red: 100%
-    green: 3%
-    blue: 5%
-
-# ── Fonts ───────────────────────────────────────────────────────────────────────
-font:
-  - file: "gfonts://Roboto"
-    id: roboto_40
-    size: 40
-  - file: "gfonts://Roboto"
-    id: roboto_36
-    size: 36
-  - file: "gfonts://Roboto"
-    id: roboto_30
-    size: 30
-  - file: "gfonts://Roboto"
-    id: roboto_20
-    size: 20
-
-spi:
-  clk_pin: GPIO18
-  mosi_pin: GPIO23
-  interface: hardware # Force hardware SPI for stability
-
-time:
-  - platform: homeassistant
-    id: esptime
-
-output:
-  - platform: ledc
-    pin: GPIO32
-    id: backlight_pwm
-
-light:
-  - platform: monochromatic
-    output: backlight_pwm
-    name: "Display Backlight"
-    restore_mode: ALWAYS_ON
-    default_transition_length: 0s
-
-display:
-  - platform: st7789v
-    id: my_display_id
-    model: custom
-    width: 240
-    height: 320
-#    rotation: 270
-    offset_height: 0  
-    offset_width: 0
-    cs_pin: GPIO15
-    dc_pin: GPIO26
-    reset_pin: GPIO4
-#    data_rate: 20MHz  # Lower speed is more stable on startup
-    eightbitcolor: true
-    lambda: |-
-          it.strftime(80, 60, id(roboto_40), TextAlign::BASELINE_LEFT, "%H:%M", id(esptime).now());
-          it.printf(50, 120, id(roboto_36), id(my_white), "%.2f km/h", id(speed_kmh).state);
-          it.printf(50, 150, id(roboto_36), id(my_white), "%.2f km", id(distance_boot_km).state);
-          it.printf(50, 230, id(roboto_30), id(my_yellow), "Steps: %.0f", id(steps_today).state);
